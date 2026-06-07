@@ -62,8 +62,13 @@ class Processor(Node):
             delta_y = self.delta_y
         
         msg = MotorPWM()
-        msg.pwm_j1 = self.compute_PID(delta_x)
-        msg.pwm_j2 = self.compute_PID(delta_y)
+        if delta_x < 0:
+            msg.dir_j1 = -1
+        if delta_y < 0:
+            msg.dir_j2 = -1
+
+        msg.pwm_j1 = abs(self.compute_PID(delta_x))
+        msg.pwm_j2 = abs(self.compute_PID(delta_y))
         
         self.PWM_publisher.publish(msg)
 

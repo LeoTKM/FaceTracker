@@ -50,6 +50,8 @@ class I2CManagerNode(Node):
         self.max_j2 = 360
         self.min_j2 = 0
 
+        self.counter = 0.0 # for testing
+
         # self.j1_rest_angle = 120 -> move to their respective nodes
         # self.j2_rest_angle = 120
 

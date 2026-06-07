@@ -1,4 +1,4 @@
-# @brief Motor control
+# @brief Motor control (low & high level)
 #
 # @author Leo
 #
@@ -23,12 +23,43 @@ from face_messages.srv import Angles
 import time
 import logging
 
+# -- Constant --
 KP = 400
+PWM_MAX = 2240
+PWM_MIN = 1
+
+# -- Raspberry Pi -- 
+import lgpio
+h = lgpio.gpiochip_open(0)
+
 
 class MotorControl():
     # low-level motor control logic
-    def temp():
-        return
+    def __init__(self, motor_index: int):
+        self.MI = motor_index
+        if (self.MI != 0 or self.MI != 1):
+            self.get_logger().error(f"{self.MI} is an invalid index")
+
+        # hardware pins
+        self.SPI_direction_PIN = [23, 24]   # needs to be checked
+        self.SPI_PWM_PIN = [18, 14]
+
+        lgpio.gpio_claim_output(h, self.SPI_direction_PIN[motor_index])
+        lgpio.gpio_claim_output(h, self.SPI_PWM_PIN[motor_index])
+
+ 
+    def update_motor_speed(self, frequency):
+        # ensure PWM not too fast
+        frequency = frequency if frequency < PWM_MAX else PWM_MAX
+        frequency = frequency if frequency > PWM_MIN else PWM_MIN
+
+        lgpio.tx_pwm(h, self.SPI_PWM_PIN[self.MI], frequency, 50) # duty cycle = 50%
+
+
+    def change_dir(self, dir: int):
+        # 1 is ...
+        lgpio.gpio_write(h, self.SPI_direction_PIN[self.MI], dir)
+
 
 class MotorJointNode(Node):
     # subscribes to PWM output from the processor node
@@ -37,10 +68,12 @@ class MotorJointNode(Node):
         self.MI = motor_index
         # motor_index: 0, 1 corresponding to motor joint 1 and joint 2
         self.resting_angles: list[float] = [120.0, 120.0] # fixed
-
         self.current_angles: list[float] = [0, 0]       # from return_angles (service)
         self.out_of_bound: list[bool] = [False, False]  # from /angle_boundary_check
         self.target_PWM: list[int] = [0, 0]             # from /PWM_command
+        self.target_dir: list[int] = [0, 0]             # 0 or 1, from /PWM_command
+
+        self.motor_instance = MotorControl(motor_index)
         
         self.zeroed_j1 = False     
         self.zeroed_j2 = False          
@@ -50,9 +83,9 @@ class MotorJointNode(Node):
         # client setup
         self.angle_client = self.create_client(Angles, 'return_angles')
         self.request_package = Angles.Request()
-        self.get_logger().info(f"HELLO World, from {self.MI}")
 
         # the following while loop WILL BLOCK the execution of the other node...
+        # but it's fine, because both nodes subscribe to the same service
         while not self.angle_client.wait_for_service(timeout_sec = 1):
             self.get_logger().info("magnetic encoder not available, retrying...")
 
@@ -60,9 +93,19 @@ class MotorJointNode(Node):
         group_a = MutuallyExclusiveCallbackGroup()
         self.angle_timer = self.create_timer(0.02, self.update_current_angles, callback_group = group_a)
 
+        # 2 subscriptions: /angle_boundary_check & /PWM_command
+        group_b = MutuallyExclusiveCallbackGroup()
+        group_c = MutuallyExclusiveCallbackGroup()
+        self.out_of_bound_subscriber = self.create_subscription(Boundary, '/angle_boundary_check', self.update_boundary, 10, callback_group = group_b)
+        self.PWM_subscriber = self.create_subscription(MotorPWM, '/PWM_command', self.update_target_PWM, 10, callback_group = group_c)
+        
+        # zeroing the motors
         # reading angles and zeroing the motors happen at the same time
         self.zero_thread = threading.Thread(target=self.zero_motor, daemon=True)
         self.zero_thread.start()
+
+        group_d = MutuallyExclusiveCallbackGroup()
+        self.timer = self.create_timer(0.02, self.run_project, callback_group = group_c)
 
 
     def update_current_angles(self) -> None:
@@ -106,13 +149,14 @@ class MotorJointNode(Node):
             if (abs(current_angle - self.resting_angles[self.MI]) < 4):
                 # zeroed
                 self.get_logger().info(f"Motor {self.MI} zeroed")
+                self.zeroed_j1 = self.zeroed_j2 = True
                 self.angle_timer.cancel()
                 return
             
             delta_angle = current_angle - self.resting_angles[self.MI]
             target_PWM = abs(self.compute_PID(delta_angle))
             target_dir = -1 if (delta_angle > 0) else 1
-            #...
+            #... move motor
 
 
     def compute_PID(self, angle_error: int) -> int:
@@ -122,15 +166,48 @@ class MotorJointNode(Node):
         return p_t + i_t + d_t
 
 
-    def update_boundary(self):
-        # for self.out_of_bound
+    def update_boundary(self, msg):
+        # from /angle_boundary_check
+        if (msg == None):
+            self.get_logger().info("magnetic encoder is not available...")
+        with self.lock:
+            match self.MI:
+                case 0:
+                    self.out_of_bound[self.MI] = msg.j1_out_of_bound
+                case 1: 
+                    self.out_of_bound[self.MI] = msg.j2_out_of_bound
 
+        print(msg.j1_out_of_bound)
         return
         
 
-    def update_target_PWM(self):
-        # for self.target_PWM
+    def update_target_PWM(self, msg):
+        # from /PWM_command
+        if (msg == None):
+            self.get_logger().info("the camera is not available...")
+        with self.lock:
+            self.target_PWM[0] = msg.pwm_j1
+            self.target_PWM[1] = msg.pwm_j2
+            self.target_dir[0] = msg.dir_j1
+            self.target_dir[1] = msg.dir_j2
         return
+    
+
+    def run_project(self):
+        # we shouldn't start following the face if the zeroing process is not complete
+        if not (self.zeroed_j2 and self.zeroed_j1): return
+
+        # assuming
+        # self.target_PWM[self.MI] has the latest PWM command
+        # self.target_dir[self.MI] has the latest direction command
+        # self.out_of_bound[self.MI] tells us if the motors are running properly
+
+        # if the motor exceeds angle constraints
+        if self.out_of_bound[self.MI]:
+            self.motor_instance.update_motor_speed(0)
+
+        self.motor_instance.update_motor_speed(self.target_PWM[self.MI])
+        self.motor_instance.change_dir(self.target_dir[self.MI])
         
 
 def main(args=None):
@@ -149,86 +226,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
-# h = lgpio.gpiochip_open(0)
-
-# PWM_MAX = 2240
-# PWM_MIN = 1
-
-# def check_angle_boundary(angles):
-#     for angle in angles:
-#         if not (0 <= angle and angle <= 360):
-#             return False
-#     return True
-
-
-# class Motor:
-#     def __init__ (
-#         self, MAX_ANGLE: float, MIN_ANGLE: float, INIT_ANGLE: float,
-#         I2C_op: int, SPI_dir_PIN: int, SPI_PWM_PIN: int
-#     ):
-#         if (not (check_angle_boundary([MAX_ANGLE, MIN_ANGLE, INIT_ANGLE]))):
-#             raise ValueError("invalid angle")
-
-#         self.MAX_ANGLE = MAX_ANGLE
-#         self.MIN_ANGLE = MIN_ANGLE
-#         self.INIT_ANGLE = INIT_ANGLE
-
-#         self.SPI_dir_PIN = SPI_dir_PIN              # SPI pins
-#         self.SPI_PWM_PIN = SPI_PWM_PIN
-
-#         lgpio.gpio_claim_output(h, SPI_dir_PIN)     # initialize SPI pins
-#         lgpio.gpio_claim_output(h, SPI_PWM_PIN)
-
-#         self.encoder = ME.MagneticEncoder(I2C_op)   # assign an angle sensor to the motor
-
-
-#     def update_motor_speed(self, frequency):
-#         if frequency >= PWM_MAX:
-#             frequency = PWM_MAX
-#         elif frequency <= PWM_MIN:
-#             frequency = PWM_MIN
-#         lgpio.tx_pwm(h, self.SPI_PWM_PIN, frequency, 50)
-
-
-#     def change_dir(self, dir: int):
-#         lgpio.gpio_write(h, self.SPI_dir_PIN, dir)
-
-
-#     async def angle_violation(self):
-#         current_angle = await self.encoder.return_angle()
-#         if not (MIN_ANGLE <= current_angle and current_angle <= MAX_ANGLE):
-#             lgpio.tx_pwm(h, self.SPI_PWM_PIN, 0, 50)    # stop motion
-
-
-#     async def initialize_position(self):
-#         target_angle = self.INIT_ANGLE
-
-#         while (True):
-#             await asyncio.sleep(0.001)
-#             current_angle = await self.encoder.return_angle()
-#             error = target_angle - current_angle
-#             print(error, target_angle, current_angle)
-
-#             if (abs(error) <= 1):
-#                 self.update_motor_speed(0)   # stop calibrating
-#                 print("arm ready")
-#                 break
-
-#             update_frequency = PID.compute_PID(error)
-
-#             if update_frequency <= 0:
-#                 lgpio.gpio_write(h, self.SPI_dir_PIN, 1)
-#             else:
-#                 lgpio.gpio_write(h, self.SPI_dir_PIN, 0)
-            
-#             self.update_motor_speed(abs(update_frequency))
-
-
-# async def testing():
-#     testing_motor = Motor(360, 0, 120, 1, 1, 1)
-#     await testing_motor.initialize_position()
-
-# if __name__ == "__main__":
-#     asyncio.run(testing())
