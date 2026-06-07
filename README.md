@@ -1,10 +1,12 @@
 ## FaceTracker 26
 
 **Workflow**
-Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs independently of motor execution. The sampling frequency is set to 20 Hz to match the slowest sampling rate among all onboard sensors. Updated information is continuously published to and stored in the motor control logic node. The motor logic checks the new information every 1/2 seconds to modify its PID control loop and goal trajectory. 
+
+Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs independently of motor execution. Updated information is continuously published to and stored in the motor control logic node. The motor logic checks the new information every 1/2 seconds to modify its PID control loop and goal trajectory. 
 
 
 **Files**
+
 This folder contains three packages: 
 - face_tracker: data collection, arm control and simluation (RViz)
     - node: entry
@@ -26,6 +28,7 @@ This folder contains three packages:
     
 
 **ROS2 Reminder**
+
 Parallelism is impossible with a single core. People often mean concurrency, ie, switching between tasks fast enough to create the illusion that they are running at the same time (running in parallel).
 
 By default, all callback functions in a single ROS2 node belong to the same callback group (ie, MutuallyExclusive callback group), which means that only one callback can run at a time within the node (ie, no concurrency), even when using a MultiThreadedExecutor. 
