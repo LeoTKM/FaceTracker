@@ -1,0 +1,2 @@
+bool j1_out_of_bound
+bool j2_out_of_bound

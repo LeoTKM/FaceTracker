@@ -1,0 +1,5 @@
+bool zeroed_j1
+bool zeroed_j2
+---
+float64 angle_j1
+float64 angle_j2

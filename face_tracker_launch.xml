@@ -1,0 +1,7 @@
+<!-- Date: 2026 May 23 -->
+
+<!-- <?xml version="1.0" encoding="UTF-8"?> -->
+<launch>
+  <node pkg="face_track" exec="camera" namespace="camera_main"/>
+  <node pkg="face_track" exec="i2c_manager" namespace="i2c_main"/>
+</launch>

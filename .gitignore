@@ -1,0 +1,9 @@
+.DS_Store
+.thumbs.db
+.vscode/
+__pycache__/
+
+/build/
+/install/
+/log/
+
