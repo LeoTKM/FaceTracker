@@ -18,11 +18,12 @@ from face_messages.msg import FaceShift
 
 import logging
 import cv2 as cv
+import os
 import numpy as numpy
 import time
 
-SHIFT_TOLERANCE = 22  
-faceCascade = cv.CascadeClassifier('haarcascade_frontalface_default.xml')
+SHIFT_TOLERANCE = 11 
+faceCascade = cv.CascadeClassifier('/home/your_username/src/face_tracker/face_tracker/haarcascade_frontalface_default.xml')
 
 class Camera(Node):
     def __init__(self):
@@ -41,15 +42,17 @@ class Camera(Node):
             cam = cv.VideoCapture(i)
             if cam.isOpened():
                 self.camera_index = i
-        
-        if (not self.camera_index):
+                cam.release()
+                break
+
+        if not isinstance(self.camera_index, int):
             self.get_logger().error("Check camera connection")
             return 
 
         print("Found camera")
         self.init_done = True
 
-        self.cam = cv.VideoCapture(self.camera_index)
+        self.cam = cv.VideoCapture(self.camera_index, )
         self.cam.set(cv.CAP_PROP_FPS, 30)
 
         frame_width = int(self.cam.get(cv.CAP_PROP_FRAME_WIDTH)) / 2        # Frame resized to half its original size
@@ -76,6 +79,8 @@ class Camera(Node):
 
         while rval:
             rval, frame = self.cam.read()
+            if not rval or frame is None:
+                print("Failed to grab frame")
 
             # resize (1/2)
             scale_factor_x = 0.5
@@ -86,7 +91,8 @@ class Camera(Node):
             key = cv.waitKey(1)
             if key == 27:
                 break
-            self.cam.release()
+            
+        self.cam.release()
 
 
     def detect_face(self, img):
@@ -94,25 +100,33 @@ class Camera(Node):
         face_rect = faceCascade.detectMultiScale(face_img, scaleFactor=1.3, minNeighbors=5)
         # face_rect is a tuple, ie (x, y, w, h), (x, y) is the top left corner of the face
 
-        if (face_rect):
+        if len(face_rect) > 0:
+            (x, y, w, h) = face_rect[0]
             face_centre_x = int(x + w/2)
             face_centre_y = int(y + h/2)
 
+            print(face_centre_x)
             with self.lock:
             # if delta_x = 0 -> shift is insignificant
                 delta = face_centre_x - self.half_frame_width
-                self.delta_x = (delta) if delta > (SHIFT_TOLERANCE) else 0
+                self.delta_x = (delta) if (abs(delta)) > (SHIFT_TOLERANCE) else 0
 
                 delta = face_centre_y - self.half_frame_height
-                self.delta_y = (delta) if delta > (SHIFT_TOLERANCE) else 0     
+                self.delta_y = (delta) if (abs(delta)) > (SHIFT_TOLERANCE) else 0     
+                print(delta)
+        else:
+            with self.lock:
+                # stop motion if no face detected
+                self.delta_x = 0
+                self.delta_y = 0   
 
 
     def publish_centre_shift(self):
         # the FaceShift message type contains the change in x, change in y and init_done: bool
         msg = FaceShift()
         with self.lock:
-            msg.delta_x = self.delta_x
-            msg.delta_y = self.delta_y
+            msg.delta_x = int(self.delta_x)
+            msg.delta_y = int(self.delta_y)
         msg.init_done = self.init_done
         
         self.publisher_.publish(msg)
