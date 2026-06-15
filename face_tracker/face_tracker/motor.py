@@ -1,3 +1,6 @@
+# code for testing one motor
+# run python3 /path/motor.py
+
 import time
 import logging
 
