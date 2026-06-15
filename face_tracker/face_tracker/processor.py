@@ -19,7 +19,7 @@ import logging
 import time
 
 # -- PID Constant --
-KP = 50
+KP = 8
 
 class Processor(Node):
     def __init__(self):
@@ -64,7 +64,7 @@ class Processor(Node):
         msg = MotorPWM()
         if delta_x < 0:
             msg.dir_j1 = -1
-        if delta_y < 0:
+        if delta_y > 0:
             msg.dir_j2 = -1
 
         msg.pwm_j1 = abs(self.compute_PID(delta_x))
@@ -101,3 +101,4 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
+
