@@ -37,12 +37,12 @@ class MotorControl():
     # low-level motor control logic
     def __init__(self, motor_index: int):
         self.MI = motor_index
-        if (self.MI != 0 or self.MI != 1):
+        if (self.MI != 0 and self.MI != 1):
             self.get_logger().error(f"{self.MI} is an invalid index")
 
         # hardware pins
-        self.SPI_direction_PIN = [23, 24]   # needs to be checked
-        self.SPI_PWM_PIN = [18, 14]
+        self.SPI_direction_PIN = [23, 24]   # checked
+        self.SPI_PWM_PIN = [18, 13]
 
         lgpio.gpio_claim_output(h, self.SPI_direction_PIN[motor_index])
         lgpio.gpio_claim_output(h, self.SPI_PWM_PIN[motor_index])
@@ -84,14 +84,14 @@ class MotorJointNode(Node):
         self.angle_client = self.create_client(Angles, 'return_angles')
         self.request_package = Angles.Request()
 
-        # the following while loop WILL BLOCK the execution of the other node...
-        # but it's fine, because both nodes subscribe to the same service
-        while not self.angle_client.wait_for_service(timeout_sec = 1):
-            self.get_logger().info("magnetic encoder not available, retrying...")
+        # # the following while loop WILL BLOCK the execution of the other node...
+        # # but it's fine, because both nodes subscribe to the same service
+        # while not self.angle_client.wait_for_service(timeout_sec = 1):
+        #     self.get_logger().info("magnetic encoder not available, retrying...")
 
-        # start reading angles from the i2c_manager node immediately (calling services)
-        group_a = MutuallyExclusiveCallbackGroup()
-        self.angle_timer = self.create_timer(0.02, self.update_current_angles, callback_group = group_a)
+        # # start reading angles from the i2c_manager node immediately (calling services)
+        # group_a = MutuallyExclusiveCallbackGroup()
+        # self.angle_timer = self.create_timer(0.02, self.update_current_angles, callback_group = group_a)
 
         # 2 subscriptions: /angle_boundary_check & /PWM_command
         group_b = MutuallyExclusiveCallbackGroup()
@@ -99,11 +99,12 @@ class MotorJointNode(Node):
         self.out_of_bound_subscriber = self.create_subscription(Boundary, '/angle_boundary_check', self.update_boundary, 10, callback_group = group_b)
         self.PWM_subscriber = self.create_subscription(MotorPWM, '/PWM_command', self.update_target_PWM, 10, callback_group = group_c)
         
-        # zeroing the motors
-        # reading angles and zeroing the motors happen at the same time
-        self.zero_thread = threading.Thread(target=self.zero_motor, daemon=True)
-        self.zero_thread.start()
+        # # zeroing the motors
+        # # reading angles and zeroing the motors happen at the same time
+        # self.zero_thread = threading.Thread(target=self.zero_motor, daemon=True)
+        # self.zero_thread.start()
 
+        self.zeroed_j1 = self.zeroed_j2 = True # delete this line when the magnetic encoder becomes available
         group_d = MutuallyExclusiveCallbackGroup()
         self.timer = self.create_timer(0.02, self.run_project, callback_group = group_c)
 
@@ -226,3 +227,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
