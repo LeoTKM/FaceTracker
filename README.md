@@ -1,7 +1,8 @@
-## FaceTracker 26
+<h1>FaceTracker 26</h1>
 
 ### Workflow
-Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs independently of motor execution. Updated information is continuously published to and stored in the motor control logic node. The motor logic checks the new information every 1/2 seconds to modify its PID control loop and goal trajectory. 
+Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs independently of motor execution. Updated information is continuously published to and stored in the motor control logic node. 
+![image](https://leotkm.github.io/assets/img/FaceTracker/ROS2.png)
 
 
 ### Files
