@@ -2,17 +2,17 @@
 
 ### Catalog
 - [Workflow](#workflow)
-- [FACTR Teleop](#factr-teleop)
+- [Packages](#packages)
 
 
-### Workflow
+## Workflow
 Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs independently of motor execution.
 <p align = "center">
     <img src="images/FlowDiagram.jpeg" alt="Flow diagram" width=70%>
 </p>
 
 
-### Files
+## Packages
 This project has four packages:
 
 - **face_tracker**: data collection, arm control and simluation (RViz)
@@ -31,8 +31,9 @@ This project has four packages:
 - **face_tracker_urdf**: .urdf file of the tracker model, RViz configuration and launch files. 
 
 - **robo_arm_urdf**: open source Arctos package 
-    - follow this tutorial: https://automaticaddison.com/how-to-load-a-urdf-file-into-rviz-ros-2/
-    
+ 
+
+These packages are located in the root directory.
 
 ### ROS2 Reminder
 
