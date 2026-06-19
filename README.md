@@ -1,8 +1,15 @@
 <h1>FaceTracker 26</h1>
 
+### Catalog
+- [Workflow](#workflow)
+- [FACTR Teleop](#factr-teleop)
+
+
 ### Workflow
-Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs independently of motor execution. Updated information is continuously published to and stored in the motor control logic node. 
-![image](https://leotkm.github.io/assets/img/FaceTracker/ROS2.png)
+Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs independently of motor execution.
+<p align = "center">
+    <img src="images/FlowDiagram.jpeg" alt="Flow diagram" width=70%>
+</p>
 
 
 ### Files
