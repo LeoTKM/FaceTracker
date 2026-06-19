@@ -26,7 +26,7 @@ Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs indepen
 ## Packages
 This project has four packages:
 
-- **face_tracker**: data collection, arm control and simluation (RViz)
+- **face_tracker**: data collection and arm control
     - node: entry
     - node: camera
     - node: processor
