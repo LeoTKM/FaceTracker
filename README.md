@@ -1,13 +1,11 @@
 <h1>FaceTracker 26</h1>
 
-<p align="center">
-  <video src="images/FaceTrackerFinalProduct.mp4" width="600" controls>
-  </video>
-</p>
+[Download/View Video](./images/FaceTrackerFinalProduct.mp4)
 
 ### Catalog
 - [Workflow](#workflow)
 - [Packages](#packages)
+- [ROS2 Reminder](#ros2-reminder)
 
 
 ## Workflow
@@ -27,11 +25,15 @@ This project has four packages:
     - node: motor_joint
     - node: i2c_manager
 
+ 
 - **face_messages**: custom message types
-    - Boundary.msg: j1_out_of_bound: bool, j2_out_of_bound: bool
-    - FaceShift.msg: delta_x, delta_y, init_done: bool
-    - MotorPWM.msg: pwm_j1, pwm_j2
-    - Angles.srv: zeroed: bool, angle_j1, angle_j2
+
+| Types | Fields |
+|------|--------|
+| Boundary.msg | j1_out_of_bound: bool, j2_out_of_bound: bool |
+| FaceShift.msg | delta_x, delta_y, init_done: bool |
+| MotorPWM.msg | pwm_j1, pwm_j2 |
+| Angles.srv | zeroed: bool, angle_j1, angle_j2 |
     
 - **face_tracker_urdf**: .urdf file of the tracker model, RViz configuration and launch files. 
 
