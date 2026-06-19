@@ -1,5 +1,10 @@
 <h1>FaceTracker 26</h1>
 
+<p align="center">
+  <video src="images/FaceTrackerFinalProduct.mp4" width="600" controls>
+  </video>
+</p>
+
 ### Catalog
 - [Workflow](#workflow)
 - [Packages](#packages)
