@@ -17,7 +17,7 @@ Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs indepen
 
 ## Installation
 - Install ROS2 (version Jazzy)
-- Dowload this repository to a workspace (ie, a directory)
+- Download this repository to a workspace (ie, a directory)
   ~~~
   git clone https://github.com/LeoTKM/FaceTracker.git
   ~~~
