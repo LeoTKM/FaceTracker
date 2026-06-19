@@ -4,6 +4,7 @@
 
 ### Catalog
 - [Workflow](#workflow)
+- [Installation](#installation)
 - [Packages](#packages)
 - [ROS2 Reminder](#ros2-reminder)
 
@@ -14,6 +15,13 @@ Sensor data collection (e.g., magnetic encoder, FT sensors, camera) runs indepen
     <img src="images/FlowDiagram.jpeg" alt="Flow diagram" width=70%>
 </p>
 
+## Installation
+- Install ROS2 (version Jazzy)
+- Dowload this repository to a workspace (ie, a directory)
+  ~~~
+  git clone https://github.com/LeoTKM/FaceTracker.git
+  ~~~
+- Source ROS2 and run the launch files
 
 ## Packages
 This project has four packages:
@@ -42,7 +50,7 @@ This project has four packages:
 
 These packages are located in the root directory.
 
-### ROS2 Reminder
+## ROS2 Reminder
 
 Parallelism is impossible with a single core. People often mean concurrency, ie, switching between tasks fast enough to create the illusion that they are running at the same time (running in parallel).
 
